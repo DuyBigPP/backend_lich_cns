@@ -8,15 +8,37 @@ datasource db {
 }
 
 model Admin {
-  id       String @id @default(uuid())  
-  username String @unique              
-  password String                       
+  id       String @id @default(uuid())
+  username String @unique
+  password String
+}
+
+model Position {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  students Student[]
 }
 
 model Student {
-  id        String       @id @default(uuid()) 
-  name      String       
-  studentId String       @unique               
-  email     String?      @unique               
-  position  String?
+  id          String       @id @default(uuid())
+  name        String
+  studentId   String       @unique
+  email       String?      @unique
+  positionId  String?
+  position    Position?    @relation(fields: [positionId], references: [id])
+  attendances Attendance[]
+}
+
+model Attendance {
+  id          String   @id @default(uuid())
+  lectureId   String
+  lectureDate DateTime
+  subject     String
+  absent      Boolean  @default(false)
+  note        String?
+  notified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
 }
