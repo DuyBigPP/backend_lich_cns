@@ -8,9 +8,10 @@ datasource db {
 }
 
 model Admin {
-  id       String @id @default(uuid())
-  username String @unique
-  password String
+  id            String    @id @default(uuid())
+  username      String    @unique
+  password      String
+  receivedMessages  Message[] @relation("AdminReceivedMessages")
 }
 
 model Position {
@@ -27,6 +28,7 @@ model Student {
   positionId  String?
   position    Position?    @relation(fields: [positionId], references: [id])
   attendances Attendance[]
+  sentMessages Message[]   @relation("StudentSentMessages")
 }
 
 model Attendance {
@@ -41,4 +43,37 @@ model Attendance {
   updatedAt   DateTime @updatedAt
   studentId   String
   student     Student  @relation(fields: [studentId], references: [id])
+}
+
+model Message {
+  id          String        @id @default(uuid())
+  title       String
+  content     String
+  isRead      Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Người gửi (sinh viên)
+  senderId    String
+  sender      Student       @relation("StudentSentMessages", fields: [senderId], references: [id])
+  
+  // Người nhận (admin/giảng viên)
+  receiverId  String
+  receiver    Admin         @relation("AdminReceivedMessages", fields: [receiverId], references: [id])
+  
+  // Các tệp đính kèm
+  attachments Attachment[]
+}
+
+model Attachment {
+  id          String    @id @default(uuid())
+  fileName    String
+  fileType    String
+  filePath    String
+  fileSize    Int
+  uploadedAt  DateTime  @default(now())
+  
+  // Quan hệ với Message
+  messageId   String
+  message     Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
 }

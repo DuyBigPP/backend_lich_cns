@@ -8,13 +8,23 @@ import emailRoutes from './routes/emailRoutes.js';
 import scheduleRoutes from './routes/scheduleRoutes.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
 import positionRoutes from './routes/positionRoutes.js';
-
+import messageRoutes from './routes/messageRoutes.js';
+import path from 'path';
 
 dotenv.config();
 const app = express();
 
-app.use(cors());
+// Cấu hình CORS để cho phép tất cả các requests và hỗ trợ credentials
+app.use(cors({
+  origin: '*', // Cho phép tất cả các nguồn 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+}));
+
 app.use(express.json());
+
+// Cấu hình để phục vụ các tệp tĩnh từ thư mục uploads
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Routes
 app.use('/api/students', studentRoutes);
@@ -24,6 +34,8 @@ app.use('/api/email', emailRoutes);
 app.use('/api/schedule', scheduleRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/positions', positionRoutes);
+app.use('/api/messages', messageRoutes);
+
 // Route chào mừng
 app.get('/', (req, res) => {
   res.json({ message: 'Chào mừng đến với API quản lý lịch học sinh viên!' });
