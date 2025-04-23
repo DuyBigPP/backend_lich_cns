@@ -18,5 +18,8 @@ export const checkAuth = (req, res, next) => {
       console.error('Lỗi xác thực token:', error);
       res.status(401).json({ error: 'Token không hợp lệ' });
     }
-  };
+};
+
+// Thêm alias cho checkAuth để khắc phục lỗi import
+export const authMiddleware = checkAuth;
   

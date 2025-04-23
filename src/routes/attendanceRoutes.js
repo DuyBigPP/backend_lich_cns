@@ -79,37 +79,93 @@ router.post('/student/:studentId', checkAuth, async (req, res) => {
       }
     });
     
-    if (existingAttendance) {
-      // Cập nhật bản ghi hiện có
-      const updatedAttendance = await prisma.attendance.update({
-        where: { id: existingAttendance.id },
-        data: {
-          absent: absent ?? false,
-          note,
-          updatedAt: new Date()
+    let attendance;
+    
+    // Sử dụng transaction để đảm bảo tính nhất quán dữ liệu
+    await prisma.$transaction(async (tx) => {
+      if (existingAttendance) {
+        // Kiểm tra xem có thay đổi trạng thái từ không vắng sang vắng hay không
+        const shouldNotify = !existingAttendance.absent && absent;
+        
+        // Cập nhật bản ghi hiện có
+        attendance = await tx.attendance.update({
+          where: { id: existingAttendance.id },
+          data: {
+            absent: absent ?? false,
+            note,
+            notified: shouldNotify ? true : existingAttendance.notified,
+            // Nếu thay đổi trạng thái vắng mặt, reset trạng thái phản hồi
+            hasResponse: existingAttendance.absent !== absent ? false : existingAttendance.hasResponse,
+            responseStatus: existingAttendance.absent !== absent ? null : existingAttendance.responseStatus,
+            updatedAt: new Date()
+          }
+        });
+        
+        // Nếu sinh viên vắng mặt và cần thông báo
+        if (shouldNotify) {
+          // Tạo thông báo mới với nested write
+          await tx.systemNotification.create({
+            data: {
+              title: `Thông báo vắng học: ${subject}`,
+              content: `Bạn đã được ghi nhận vắng mặt trong buổi học ${subject} vào ngày ${new Date(lectureDate).toLocaleDateString('vi-VN')}. Nếu có nhầm lẫn, hãy phản hồi bằng cách cung cấp minh chứng.`,
+              isRead: false,
+              studentId: student.id,
+              attendanceId: attendance.id
+            }
+          });
         }
-      });
-      
-      res.json(updatedAttendance);
-    } else {
-      // Tạo bản ghi mới
-      const newAttendance = await prisma.attendance.create({
-        data: {
-          lectureId,
-          lectureDate: new Date(lectureDate),
-          subject,
-          absent: absent ?? false,
-          note,
-          notified: false,
-          studentId: student.id
+      } else {
+        // Tạo bản ghi mới với Nested writes nếu vắng mặt
+        if (absent) {
+          // Khi vắng mặt, tạo attendance kèm theo tạo notification
+          attendance = await tx.attendance.create({
+            data: {
+              lectureId,
+              lectureDate: new Date(lectureDate),
+              subject,
+              absent: true,
+              note,
+              notified: true, // Đánh dấu là đã thông báo
+              hasResponse: false,
+              responseStatus: null,
+              studentId: student.id,
+              // Sử dụng nested writes để tạo notification cùng lúc
+              notifications: {
+                create: {
+                  title: `Thông báo vắng học: ${subject}`,
+                  content: `Bạn đã được ghi nhận vắng mặt trong buổi học ${subject} vào ngày ${new Date(lectureDate).toLocaleDateString('vi-VN')}. Nếu có nhầm lẫn, hãy phản hồi bằng cách cung cấp minh chứng.`,
+                  isRead: false,
+                  studentId: student.id
+                }
+              }
+            },
+            include: {
+              notifications: true // Bao gồm thông báo vừa tạo trong kết quả
+            }
+          });
+        } else {
+          // Không vắng mặt, chỉ tạo attendance bình thường
+          attendance = await tx.attendance.create({
+            data: {
+              lectureId,
+              lectureDate: new Date(lectureDate),
+              subject,
+              absent: false,
+              note,
+              notified: false,
+              hasResponse: false,
+              responseStatus: null,
+              studentId: student.id
+            }
+          });
         }
-      });
-      
-      res.status(201).json(newAttendance);
-    }
+      }
+    });
+    
+    res.status(existingAttendance ? 200 : 201).json(attendance);
   } catch (error) {
     console.error('Lỗi khi cập nhật điểm danh:', error);
-    res.status(500).json({ error: 'Lỗi khi cập nhật điểm danh' });
+    res.status(500).json({ error: 'Lỗi khi cập nhật điểm danh', message: error.message });
   }
 });
 

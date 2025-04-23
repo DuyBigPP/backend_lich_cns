@@ -33,7 +33,7 @@ export const register = async (req, res) => {
     const token = jwt.sign(
       { id: newAdmin.id, username: newAdmin.username },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '365d' }
     );
     
     // Trả về thông tin không bao gồm mật khẩu
@@ -74,7 +74,7 @@ export const login = async (req, res) => {
     const token = jwt.sign(
       { id: admin.id, username: admin.username },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '365d' }
     );
     
     // Trả về thông tin không bao gồm mật khẩu

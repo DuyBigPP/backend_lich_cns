@@ -9,7 +9,10 @@ import scheduleRoutes from './routes/scheduleRoutes.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
 import positionRoutes from './routes/positionRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import responseRoutes from './routes/responseRoutes.js';
 import path from 'path';
+import fs from 'fs';
 
 dotenv.config();
 const app = express();
@@ -23,6 +26,18 @@ app.use(cors({
 
 app.use(express.json());
 
+// Đảm bảo thư mục uploads tồn tại
+const uploadsPath = path.join(process.cwd(), 'uploads');
+const responsesPath = path.join(process.cwd(), 'uploads/responses');
+
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath);
+}
+
+if (!fs.existsSync(responsesPath)) {
+  fs.mkdirSync(responsesPath);
+}
+
 // Cấu hình để phục vụ các tệp tĩnh từ thư mục uploads
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
@@ -35,6 +50,8 @@ app.use('/api/schedule', scheduleRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/positions', positionRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/responses', responseRoutes);
 
 // Route chào mừng
 app.get('/', (req, res) => {

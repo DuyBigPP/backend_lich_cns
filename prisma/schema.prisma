@@ -8,9 +8,9 @@ datasource db {
 }
 
 model Admin {
-  id            String    @id @default(uuid())
-  username      String    @unique
-  password      String
+  id                String    @id @default(uuid())
+  username          String    @unique
+  password          String
   receivedMessages  Message[] @relation("AdminReceivedMessages")
 }
 
@@ -21,28 +21,74 @@ model Position {
 }
 
 model Student {
-  id          String       @id @default(uuid())
-  name        String
-  studentId   String       @unique
-  email       String?      @unique
-  positionId  String?
-  position    Position?    @relation(fields: [positionId], references: [id])
-  attendances Attendance[]
-  sentMessages Message[]   @relation("StudentSentMessages")
+  id              String               @id @default(uuid())
+  name            String
+  studentId       String               @unique
+  email           String?              @unique
+  positionId      String?
+  position        Position?            @relation(fields: [positionId], references: [id])
+  attendances     Attendance[]
+  sentMessages    Message[]            @relation("StudentSentMessages")
+  notifications   SystemNotification[] @relation("StudentNotifications")
+  responses       StudentResponse[]    @relation("StudentResponses")
 }
 
 model Attendance {
-  id          String   @id @default(uuid())
-  lectureId   String
-  lectureDate DateTime
-  subject     String
-  absent      Boolean  @default(false)
-  note        String?
-  notified    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  studentId   String
-  student     Student  @relation(fields: [studentId], references: [id])
+  id              String               @id @default(uuid())
+  lectureId       String
+  lectureDate     DateTime
+  subject         String
+  absent          Boolean              @default(false)
+  note            String?
+  notified        Boolean              @default(false)
+  hasResponse     Boolean              @default(false)
+  responseStatus  String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  studentId       String
+  student         Student              @relation(fields: [studentId], references: [id])
+  notifications   SystemNotification[]
+}
+
+model SystemNotification {
+  id            String            @id @default(uuid())
+  title         String
+  content       String
+  isRead        Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  studentId     String
+  student       Student           @relation("StudentNotifications", fields: [studentId], references: [id])
+  attendanceId  String
+  attendance    Attendance        @relation(fields: [attendanceId], references: [id])
+  response      StudentResponse?
+}
+
+model StudentResponse {
+  id            String               @id @default(uuid())
+  title         String
+  content       String
+  isRead        Boolean              @default(false)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  notificationId String               @unique
+  notification   SystemNotification   @relation(fields: [notificationId], references: [id])
+  studentId     String
+  student       Student               @relation("StudentResponses", fields: [studentId], references: [id])
+  status        String                @default("pending")
+  adminNote     String?
+  attachments   ResponseAttachment[]
+}
+
+model ResponseAttachment {
+  id            String            @id @default(uuid())
+  fileName      String
+  fileType      String
+  filePath      String
+  fileSize      Int
+  uploadedAt    DateTime          @default(now())
+  responseId    String
+  response      StudentResponse   @relation(fields: [responseId], references: [id], onDelete: Cascade)
 }
 
 model Message {
