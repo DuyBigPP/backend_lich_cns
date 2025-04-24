@@ -41,6 +41,9 @@ if (!fs.existsSync(responsesPath)) {
 // Cấu hình để phục vụ các tệp tĩnh từ thư mục uploads
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+// Thêm route đặc biệt cho việc tải xuống tệp đính kèm phản hồi
+app.use('/api/uploads/responses', express.static(path.join(process.cwd(), 'uploads/responses')));
+
 // Routes
 app.use('/api/students', studentRoutes);
 app.use('/api/admins', adminRoutes);

@@ -10,7 +10,10 @@ import {
 } from '../controllers/responseController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { adminMiddleware } from '../middleware/adminMiddleware.js';
+import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
 
+const prisma = new PrismaClient();
 const router = express.Router();
 
 // Cấu hình lưu trữ file
@@ -48,6 +51,72 @@ router.get('/:responseId', authMiddleware, getResponseDetail);
 
 // Cập nhật trạng thái phản hồi (cho admin)
 router.patch('/:responseId/status', authMiddleware, adminMiddleware, updateResponseStatus);
+
+// Đánh dấu phản hồi đã đọc
+router.patch('/:responseId/read', authMiddleware, async (req, res) => {
+  try {
+    const { responseId } = req.params;
+    
+    // Kiểm tra xem phản hồi có tồn tại không
+    const existingResponse = await prisma.studentResponse.findUnique({
+      where: { id: responseId }
+    });
+    
+    if (!existingResponse) {
+      return res.status(404).json({ error: 'Không tìm thấy phản hồi' });
+    }
+    
+    // Cập nhật trạng thái đã đọc
+    const updatedResponse = await prisma.studentResponse.update({
+      where: { id: responseId },
+      data: { isRead: true }
+    });
+    
+    res.json({ 
+      message: 'Đã đánh dấu phản hồi đã đọc',
+      response: updatedResponse 
+    });
+  } catch (error) {
+    console.error('Lỗi khi đánh dấu phản hồi đã đọc:', error);
+    res.status(500).json({ error: 'Lỗi khi đánh dấu phản hồi đã đọc' });
+  }
+});
+
+// Tải xuống tệp đính kèm theo ID
+router.get('/attachment/:attachmentId/download', authMiddleware, async (req, res) => {
+  try {
+    const { attachmentId } = req.params;
+    
+    // Tìm tệp đính kèm trong cơ sở dữ liệu
+    const attachment = await prisma.responseAttachment.findUnique({
+      where: { id: attachmentId }
+    });
+    
+    if (!attachment) {
+      return res.status(404).json({ error: 'Không tìm thấy tệp đính kèm' });
+    }
+    
+    // Lấy tên file từ đường dẫn
+    const fileName = path.basename(attachment.filePath);
+    // Đường dẫn đầy đủ của file
+    const fullPath = path.join(process.cwd(), 'uploads/responses', fileName);
+    
+    // Kiểm tra xem file có tồn tại không
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).json({ error: 'Không tìm thấy file vật lý' });
+    }
+    
+    // Thiết lập header cho việc tải xuống
+    res.setHeader('Content-Disposition', `attachment; filename="${attachment.fileName}"`);
+    res.setHeader('Content-Type', attachment.fileType);
+    
+    // Gửi file về cho client
+    res.sendFile(fullPath);
+  } catch (error) {
+    console.error('Lỗi khi tải xuống tệp đính kèm:', error);
+    res.status(500).json({ error: 'Lỗi khi tải xuống tệp đính kèm' });
+  }
+});
 
 // Xóa tệp đính kèm
 router.delete('/attachment/:attachmentId', authMiddleware, deleteAttachment);

@@ -49,11 +49,14 @@ export const createStudentResponse = async (req, res) => {
       const attachments = [];
       
       for (const file of files) {
+        // Lưu đường dẫn tương đối thay vì đường dẫn tuyệt đối
+        const relativePath = 'uploads/responses/' + path.basename(file.path);
+        
         const attachment = await prisma.responseAttachment.create({
           data: {
             fileName: file.originalname,
             fileType: file.mimetype,
-            filePath: file.path,
+            filePath: relativePath,
             fileSize: file.size,
             responseId: response.id
           }
@@ -242,7 +245,12 @@ export const deleteAttachment = async (req, res) => {
     
     // Xóa file từ hệ thống
     try {
-      fs.unlinkSync(attachment.filePath);
+      // Lấy tên file từ đường dẫn
+      const fileName = path.basename(attachment.filePath);
+      // Đường dẫn đầy đủ của file
+      const fullPath = path.join(process.cwd(), 'uploads/responses', fileName);
+      
+      fs.unlinkSync(fullPath);
     } catch (fsError) {
       console.error('Lỗi khi xóa tệp:', fsError);
       // Không dừng xử lý nếu không xóa được file vật lý
